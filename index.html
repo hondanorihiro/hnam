@@ -1,44 +1,363 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DNA AR</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
-    * { margin: 0; padding: 0; }
-    model-viewer { width: 100vw; height: 100vh; background: #000; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; font-family: sans-serif; }
+
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+    }
+
+    #ui {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 14px 18px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.75), transparent);
+      pointer-events: none;
+      z-index: 10;
+    }
+    #ui h1 { color: #fff; font-size: 17px; font-weight: 600; }
+    #ui p  { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 3px; }
+
+    #legend {
+      position: fixed;
+      bottom: 80px; left: 0; right: 0;
+      display: flex; gap: 8px; justify-content: center;
+      pointer-events: none; z-index: 10;
+    }
+    .badge {
+      font-size: 11px; padding: 4px 12px;
+      border-radius: 20px; color: #fff; font-weight: 500;
+    }
+
+    #gesture-btn {
+      position: fixed;
+      bottom: 16px; right: 16px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; border-radius: 24px;
+      padding: 10px 18px; font-size: 13px;
+      cursor: pointer; z-index: 20;
+    }
+
+    #gesture-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #000;
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #gesture-overlay.active { display: flex; }
+
+    #gesture-overlay canvas#c3d {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    #gesture-overlay canvas#chand {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    #gesture-status {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(0,0,0,0.65); color: #fff;
+      font-size: 12px; padding: 6px 12px;
+      border-radius: 8px; z-index: 110;
+    }
+    #gesture-hint {
+      position: absolute; bottom: 60px; left: 0; right: 0;
+      text-align: center;
+      color: rgba(255,255,255,0.45); font-size: 11px;
+      z-index: 110;
+    }
+    #gesture-label {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(0,180,130,0.85); color: #fff;
+      font-size: 13px; font-weight: 600;
+      padding: 6px 14px; border-radius: 8px;
+      display: none; z-index: 110;
+    }
+
+    #gesture-close {
+      position: absolute; bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; border-radius: 24px;
+      padding: 10px 28px; font-size: 13px;
+      cursor: pointer; z-index: 110;
+    }
+    #gesture-cam-btn {
+      position: absolute; bottom: 16px; right: 16px;
+      background: rgba(0,180,130,0.85);
+      border: none; color: #fff; border-radius: 24px;
+      padding: 10px 18px; font-size: 13px;
+      cursor: pointer; z-index: 110;
+    }
   </style>
 </head>
 <body>
-  <model-viewer
-    src="./dna.glb"
-    ios-src="./dna.usdz"
-    ar
-    ar-modes="webxr scene-viewer quick-look"
-    camera-controls
-    auto-rotate
-    shadow-intensity="1">
 
-    <button slot="ar-button" style="
-      position: absolute;
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 16px 28px;
-      font-size: 18px;
-      border-radius: 999px;
-      border: none;
-      background: white;
-      color: black;
-      font-weight: bold;
-      ">
-      ARでDNAを見る
-    </button>
+<div id="ui">
+  <h1>🧬 DNA AR ビューワー</h1>
+  <p>画面下の「ARで見る」ボタン / 右下の「指で操作」</p>
+</div>
 
+<model-viewer
+  src="./dna.glb"
+  ios-src="./dna.usdz"
+  ar
+  ar-modes="webxr scene-viewer quick-look"
+  camera-controls
+  auto-rotate
+  auto-rotate-delay="0"
+  rotation-per-second="30deg"
+  shadow-intensity="1"
+  exposure="1">
 
-  </model-viewer>
-  <script type="module"
-    src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js">
-  </script>
+  <button slot="ar-button" style="
+    position: absolute;
+    bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 28px;
+    font-size: 15px; font-weight: 600;
+    border: none; border-radius: 999px;
+    background: #fff; color: #000;
+    cursor: pointer; white-space: nowrap;
+  ">ARで見る</button>
+
+</model-viewer>
+
+<div id="legend">
+  <span class="badge" style="background:rgba(255,80,80,0.85);">A アデニン</span>
+  <span class="badge" style="background:rgba(80,180,255,0.85);">T チミン</span>
+  <span class="badge" style="background:rgba(80,255,120,0.85);color:#000;">G グアニン</span>
+  <span class="badge" style="background:rgba(255,200,80,0.85);color:#000;">C シトシン</span>
+</div>
+
+<button id="gesture-btn" onclick="openGesture()">☝️ 指で操作</button>
+
+<!-- 指ジェスチャー画面 -->
+<div id="gesture-overlay">
+  <canvas id="c3d"></canvas>
+  <canvas id="chand"></canvas>
+  <div id="gesture-status">カメラを起動してください</div>
+  <div id="gesture-label">✋ 検出中</div>
+  <div id="gesture-hint">人差し指でドラッグ → 回転　／　ピンチ（親指＋人差し指）→ 拡大縮小</div>
+  <button id="gesture-close" onclick="closeGesture()">閉じる</button>
+  <button id="gesture-cam-btn" onclick="startCamera()">カメラ起動</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+let gestureInitialized = false;
+let renderer3d, scene3d, camera3d, group3d;
+let autoRot = true, rotX = 0, rotY = 0, scaleVal = 1;
+let prevIndexPos = null, prevPinchDist = null;
+let animFrameId = null;
+
+function openGesture() {
+  document.getElementById('gesture-overlay').classList.add('active');
+  if (!gestureInitialized) initThree();
+}
+
+function closeGesture() {
+  document.getElementById('gesture-overlay').classList.remove('active');
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+}
+
+function initThree() {
+  const c3d = document.getElementById('c3d');
+  const W = window.innerWidth, H = window.innerHeight;
+  const DPR = window.devicePixelRatio || 1;
+  c3d.width = W * DPR; c3d.height = H * DPR;
+  c3d.style.width = W + 'px'; c3d.style.height = H + 'px';
+
+  const chand = document.getElementById('chand');
+  chand.width = W * DPR; chand.height = H * DPR;
+  chand.style.width = W + 'px'; chand.style.height = H + 'px';
+  chand.getContext('2d').scale(DPR, DPR);
+
+  renderer3d = new THREE.WebGLRenderer({ canvas: c3d, antialias: true });
+  renderer3d.setPixelRatio(DPR);
+  renderer3d.setSize(W, H);
+  renderer3d.setClearColor(0x000000);
+
+  scene3d = new THREE.Scene();
+  camera3d = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
+  camera3d.position.set(0, 0, 5);
+
+  group3d = new THREE.Group();
+  scene3d.add(group3d);
+
+  const STEPS = 24, RADIUS = 0.9, HSTEP = 0.38;
+  const offset = -(STEPS * HSTEP) / 2;
+  const cols = [{a:0xff5050,b:0x50b4ff},{a:0x50ff78,b:0xffc850}];
+
+  for (let i = 0; i < STEPS; i++) {
+    const angle = (i / STEPS) * Math.PI * 4;
+    const y = i * HSTEP + offset;
+    const x1 = Math.cos(angle) * RADIUS, z1 = Math.sin(angle) * RADIUS;
+    const x2 = -x1, z2 = -z1;
+    const col = cols[i % 2];
+
+    [[x1,z1,col.a],[x2,z2,col.b]].forEach(([x,z,c]) => {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.13,12,12), new THREE.MeshPhongMaterial({color:c,shininess:80}));
+      s.position.set(x,y,z); group3d.add(s);
+    });
+
+    const blen = Math.sqrt((x2-x1)**2+(z2-z1)**2);
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,blen,8), new THREE.MeshPhongMaterial({color:0xdddddd,transparent:true,opacity:0.6}));
+    br.position.set(0,y,0); br.rotation.z = Math.PI/2;
+    br.rotation.y = -Math.atan2(z2-z1,x2-x1);
+    group3d.add(br);
+
+    if (i < STEPS - 1) {
+      const na = ((i+1)/STEPS)*Math.PI*4;
+      const nx1=Math.cos(na)*RADIUS, nz1=Math.sin(na)*RADIUS;
+      const ny=(i+1)*HSTEP+offset;
+      [[x1,z1,nx1,nz1],[x2,z2,-nx1,-nz1]].forEach(([ax,az,bx,bz]) => {
+        const dx=bx-ax,dy=ny-y,dz=bz-az;
+        const l=Math.sqrt(dx**2+dy**2+dz**2);
+        const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,l,8), new THREE.MeshPhongMaterial({color:0x888888}));
+        sp.position.set((ax+bx)/2,(y+ny)/2,(az+bz)/2);
+        sp.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(dx,dy,dz).normalize());
+        group3d.add(sp);
+      });
+    }
+  }
+
+  scene3d.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+  dl.position.set(3,5,5); scene3d.add(dl);
+
+  let autoT = 0;
+  function animate() {
+    animFrameId = requestAnimationFrame(animate);
+    if (autoRot) { autoT += 0.008; group3d.rotation.y = autoT; }
+    renderer3d.render(scene3d, camera3d);
+  }
+  animate();
+  gestureInitialized = true;
+}
+
+async function startCamera() {
+  document.getElementById('gesture-cam-btn').disabled = true;
+  document.getElementById('gesture-status').textContent = 'カメラを起動中...';
+  try {
+    const W = window.innerWidth, H = window.innerHeight;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: W, height: H, facingMode: 'user' } });
+    const video = document.createElement('video');
+    video.srcObject = stream; video.autoplay = true; video.playsInline = true;
+    await new Promise(r => video.onloadedmetadata = r);
+    video.play();
+    document.getElementById('gesture-status').textContent = '手の検出モデルを読み込み中...';
+    loadMediaPipe(video);
+  } catch(e) {
+    document.getElementById('gesture-status').textContent = 'カメラエラー: ' + e.message;
+    document.getElementById('gesture-cam-btn').disabled = false;
+  }
+}
+
+function loadMediaPipe(video) {
+  ['https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js',
+   'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js'].forEach((src, i) => {
+    const s = document.createElement('script');
+    s.src = src; s.crossOrigin = 'anonymous';
+    if (i === 1) s.onload = () => initHands(video);
+    document.head.appendChild(s);
+  });
+}
+
+function initHands(video) {
+  const Hands = window.Hands;
+  if (!Hands) { document.getElementById('gesture-status').textContent = '手検出ライブラリの読み込みに失敗'; return; }
+  const W = window.innerWidth, H = window.innerHeight;
+  const hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+  hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.5 });
+  hands.onResults(r => onHandResults(r, W, H));
+
+  const Camera = window.Camera;
+  if (Camera) {
+    new Camera(video, { onFrame: async () => { await hands.send({ image: video }); }, width: W, height: H }).start();
+  } else {
+    (async function loop() { await hands.send({ image: video }); requestAnimationFrame(loop); })();
+  }
+  document.getElementById('gesture-status').textContent = '準備完了 — 手をカメラに向けてください';
+}
+
+function onHandResults(results, W, H) {
+  const ctxH = document.getElementById('chand').getContext('2d');
+  ctxH.clearRect(0, 0, W, H);
+  const lbl = document.getElementById('gesture-label');
+  const sts = document.getElementById('gesture-status');
+
+  if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+    lbl.style.display = 'none'; autoRot = true;
+    prevIndexPos = null; prevPinchDist = null; return;
+  }
+
+  lbl.style.display = 'block'; autoRot = false;
+  const lm = results.multiHandLandmarks[0];
+
+  const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+  ctxH.strokeStyle = 'rgba(0,220,160,0.7)'; ctxH.lineWidth = 2;
+  CONN.forEach(([a,b]) => {
+    ctxH.beginPath();
+    ctxH.moveTo(lm[a].x*W, lm[a].y*H);
+    ctxH.lineTo(lm[b].x*W, lm[b].y*H);
+    ctxH.stroke();
+  });
+  lm.forEach((pt,i) => {
+    ctxH.beginPath();
+    ctxH.arc(pt.x*W, pt.y*H, i===8||i===4?7:4, 0, Math.PI*2);
+    ctxH.fillStyle = i===8?'#00ffaa':i===4?'#ffaa00':'rgba(255,255,255,0.8)';
+    ctxH.fill();
+  });
+
+  const idx = lm[8], thumb = lm[4];
+  const pinchDist = Math.hypot((idx.x-thumb.x)*W, (idx.y-thumb.y)*H);
+  const isPinching = pinchDist < 40;
+
+  if (isPinching) {
+    lbl.textContent = '🤏 ピンチ — 拡大縮小';
+    lbl.style.background = 'rgba(255,170,0,0.85)';
+    if (prevPinchDist !== null) {
+      const delta = (pinchDist - prevPinchDist) / 200;
+      scaleVal = Math.max(0.3, Math.min(3.0, scaleVal - delta));
+      group3d.scale.set(scaleVal, scaleVal, scaleVal);
+    }
+    prevPinchDist = pinchDist; prevIndexPos = null;
+  } else {
+    lbl.textContent = '☝️ 人差し指 — 回転';
+    lbl.style.background = 'rgba(0,180,130,0.85)';
+    prevPinchDist = null;
+    if (prevIndexPos) {
+      const dx = (idx.x - prevIndexPos.x) * W;
+      const dy = (idx.y - prevIndexPos.y) * H;
+      rotY += dx * 0.015; rotX += dy * 0.015;
+      rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotX));
+      group3d.rotation.set(rotX, rotY, 0);
+    }
+    prevIndexPos = { x: idx.x, y: idx.y };
+  }
+
+  const tips=[8,12,16,20], dips=[6,10,14,18];
+  let cnt = tips.filter((t,i) => lm[t].y < lm[dips[i]].y).length;
+  if (lm[4].x < lm[3].x) cnt++;
+  sts.textContent = `指認識中 — ${cnt}本の指を検出`;
+}
+</script>
 </body>
 </html>
